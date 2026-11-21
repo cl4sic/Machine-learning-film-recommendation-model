@@ -8,12 +8,7 @@ Universidad de Burgos (UBU) - Grado en Ingeniería Informática
 Grupo de prácticas: Grupo 12 (Adrián Bello Sánchez y Alberto Cuervo Prieto)
 Dataset: MovieLens 100k (ml-latest-small)
 
-Este script implementa todos los requerimientos de la práctica:
-1. Implementación básica del filtro colaborativo con SVD (Surprise) y evaluación.
-2. Incorporación de los miembros del equipo y generación de las Top 10 recomendaciones.
-3. Análisis de sesgos estimados en el modelo (bu y bi) y popularidad de películas.
-4. Análisis en el espacio latente (similitud coseno y películas próximas a "Toy Story").
-5. Clustering de usuarios (K-Means) para segmentación de clientes.
+Módulo 5: Análisis en el espacio latente y cálculo de similitud coseno.
 ================================================================================
 """
 
@@ -22,12 +17,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from surprise import SVD, Dataset, Reader, accuracy
-from surprise.model_selection import cross_validate, train_test_split, GridSearchCV
+from surprise import Reader, Dataset, SVD
+from surprise.model_selection import GridSearchCV
 
-from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
-from sklearn.decomposition import PCA
 from sklearn.metrics.pairwise import cosine_similarity
 
 # Configuración visual
@@ -36,9 +28,6 @@ plt.rcParams['figure.figsize'] = (10, 6)
 plt.rcParams['font.size'] = 11
 
 
-# ==============================================================================
-# 1. CARGA DE DATOS
-# ==============================================================================
 def cargar_datos():
     """Carga los ficheros ratings.csv y movies.csv locales."""
     print(">>> 1. Cargando datos de MovieLens 100k...")
@@ -50,9 +39,6 @@ def cargar_datos():
     return ratings, movies
 
 
-# ==============================================================================
-# 2. DEFINICIÓN DE USUARIOS DEL EQUIPO DE PRÁCTICAS
-# ==============================================================================
 def crear_usuarios_equipo():
     """
     Crea dos usuarios representativos del equipo de prácticas (Grupo 12):
@@ -89,9 +75,6 @@ def crear_usuarios_equipo():
     return pd.DataFrame(adrian_ratings), pd.DataFrame(alberto_ratings)
 
 
-# ==============================================================================
-# 3. ENTRENAMIENTO Y EVALUACIÓN BÁSICA DEL FILTRO SVD CON GRID SEARCH
-# ==============================================================================
 def entrenar_evaluar_svd(ratings_df):
     """Optimiza los hiperparámetros de SVD con Grid Search CV y ajusta el mejor modelo."""
     print("\n>>> 3. Optimización de hiperparámetros con Grid Search CV...")
@@ -117,16 +100,12 @@ def entrenar_evaluar_svd(ratings_df):
     modelo = SVD(n_factors=params['n_factors'], n_epochs=params['n_epochs'],
                  lr_all=params['lr_all'], reg_all=params['reg_all'], random_state=42)
     
-    # Entrenar en dataset completo
     trainset = data.build_full_trainset()
     modelo.fit(trainset)
     print("    - Mejor modelo ajustado en todo el dataset de entrenamiento.")
     return modelo, trainset
 
 
-# ==============================================================================
-# 4. RECOMENDACIONES PERSONALIZADAS TOP 10
-# ==============================================================================
 def generar_top_10(modelo, user_id, ratings_df, movies_df, min_ratings=20):
     """Obtiene las 10 mejores recomendaciones para un usuario no vistas previamente."""
     vistas = set(ratings_df[ratings_df['userId'] == user_id]['movieId'])
@@ -157,9 +136,6 @@ def generar_top_10(modelo, user_id, ratings_df, movies_df, min_ratings=20):
     return pd.DataFrame(filas)
 
 
-# ==============================================================================
-# 5. ANÁLISIS DE SESGOS ESTIMADOS
-# ==============================================================================
 def analizar_sesgos(modelo, trainset, ratings_df, movies_df):
     """Analiza sesgos de usuarios (bu) y de películas (bi), respondiendo al guion."""
     print("\n>>> 4. Análisis de Sesgos Estimados (bu y bi)...")
@@ -224,9 +200,6 @@ def analizar_sesgos(modelo, trainset, ratings_df, movies_df):
     print("    - Gráfico guardado en 'sesgos_distribucion.png'.")
 
 
-# ==============================================================================
-# 6. ANÁLISIS EN EL ESPACIO LATENTE (TOY STORY)
-# ==============================================================================
 def analizar_espacio_latente(modelo, trainset, movies_df, ratings_df, titulo="Toy Story", top_k=10, min_ratings=20):
     """Encuentra las películas más próximas a una dada en el espacio latente usando similitud coseno."""
     print(f"\n>>> 5. Análisis en el espacio latente: Películas más próximas a '{titulo}'...")
@@ -235,7 +208,6 @@ def analizar_espacio_latente(modelo, trainset, movies_df, ratings_df, titulo="To
     raw_id_ref = pelicula_ref['movieId']
     inner_id_ref = trainset.to_inner_iid(raw_id_ref)
     
-    # Vector latente qi
     vec_ref = modelo.qi[inner_id_ref].reshape(1, -1)
     sims = cosine_similarity(vec_ref, modelo.qi)[0]
     indices_ordenados = np.argsort(sims)[::-1]
@@ -262,124 +234,13 @@ def analizar_espacio_latente(modelo, trainset, movies_df, ratings_df, titulo="To
     return df_sim
 
 
-# ==============================================================================
-# 7. CLUSTERING DE USUARIOS (SEGMENTACIÓN DE CLIENTES)
-# ==============================================================================
-def segmentar_usuarios(modelo, trainset, ratings_df, movies_df, k=4):
-    """Aplica K-Means sobre la matriz de factores latentes de usuarios P."""
-    print(f"\n>>> 6. Segmentación de usuarios mediante Clustering (K-Means con k={k})...")
-    user_factors = modelo.pu
-    km = KMeans(n_clusters=k, random_state=42, n_init=15)
-    clusters = km.fit_predict(user_factors)
-    
-    user_cluster_map = {trainset.to_raw_uid(i): clusters[i] for i in range(trainset.n_users)}
-    
-    ratings_clustered = ratings_df.copy()
-    ratings_clustered['cluster'] = ratings_clustered['userId'].map(user_cluster_map)
-    ratings_clustered = ratings_clustered.dropna(subset=['cluster'])
-    ratings_clustered['cluster'] = ratings_clustered['cluster'].astype(int)
-    
-    # Películas candidatas (min 25 votos para evitar ruido)
-    conteos_votos = ratings_df['movieId'].value_counts()
-    candidatas = conteos_votos[conteos_votos >= 25].index
-    candidatas_inner = [trainset.to_inner_iid(mid) for mid in candidatas]
-    qi_candidatas = modelo.qi[candidatas_inner]
-    
-    # Distribución global de géneros en notas >= 4.0
-    merged = ratings_clustered.merge(movies_df, on='movieId')
-    high_ratings = merged[merged['rating'] >= 4.0]
-    gen_global = high_ratings['genres'].str.split('|').explode().value_counts(normalize=True)
-    
-    def obtener_etiqueta_segmento(generos):
-        g_set = set(generos)
-        if 'Animation' in g_set:
-            return 'Animación / Familiar'
-        elif 'Film-Noir' in g_set or 'War' in g_set:
-            return 'Cine Clásico / Culto'
-        elif 'Horror' in g_set or 'Crime' in g_set or 'Mystery' in g_set:
-            return 'Suspense / Terror / Crimen'
-        elif 'Adventure' in g_set or 'Action' in g_set or 'IMAX' in g_set:
-            return 'Acción / Aventura'
-        else:
-            return ' / '.join(generos[:2])
-
-    resumen_segmentos = {}
-    etiquetas = {}
-    for c in range(k):
-        n_users = (clusters == c).sum()
-        pct = (n_users / len(clusters)) * 100
-        
-        sub = high_ratings[high_ratings['cluster'] == c]
-        gen_c = sub['genres'].str.split('|').explode().value_counts(normalize=True)
-        lift = (gen_c / gen_global).dropna().sort_values(ascending=False)
-        top_g = [g for g in lift.index if g != '(no genres listed)'][:3]
-        
-        centroide = km.cluster_centers_[c]
-        afinidades = qi_candidatas.dot(centroide)
-        top_indices = np.argsort(afinidades)[::-1][:3]
-        top_m = [movies_df[movies_df['movieId'] == candidatas[i]]['title'].values[0] for i in top_indices]
-        
-        nombre_seg = obtener_etiqueta_segmento(top_g)
-        etiquetas[c] = f"Segmento {c} ({nombre_seg})"
-        resumen_segmentos[c] = {
-            'n_users': n_users, 'pct': pct,
-            'top_g': top_g, 'top_m': top_m
-        }
-
-    print("    === RESUMEN DE SEGMENTOS DE CLIENTES ===")
-    for c in range(k):
-        info = resumen_segmentos[c]
-        print(f"    * {etiquetas[c]} - {info['n_users']} usuarios ({info['pct']:.1f}%):")
-        print(f"        Géneros distintivos: {', '.join(info['top_g'])}")
-        print(f"        Películas insignia:  {', '.join(info['top_m'])}")
-        
-    print(f"\n    Adrián (userId 9991) asignado a: {etiquetas[user_cluster_map[9991]]}")
-    print(f"    Alberto (userId 9992) asignado a: {etiquetas[user_cluster_map[9992]]}")
-
-    # Representación gráfica 2D con PCA
-    pca = PCA(n_components=2, random_state=42)
-    pu_2d = pca.fit_transform(user_factors)
-    centroides_2d = pca.transform(km.cluster_centers_)
-    
-    plt.figure(figsize=(9, 6))
-    colores = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
-    
-    for c in range(k):
-        mask = clusters == c
-        plt.scatter(pu_2d[mask, 0], pu_2d[mask, 1], c=colores[c], label=etiquetas[c], alpha=0.6, s=40)
-        
-    plt.scatter(centroides_2d[:, 0], centroides_2d[:, 1], c='black', marker='X', s=130, label='Centroides')
-    
-    u_adrian = trainset.to_inner_uid(9991)
-    u_alberto = trainset.to_inner_uid(9992)
-    plt.scatter(pu_2d[u_adrian, 0], pu_2d[u_adrian, 1], c='gold', marker='*', s=250, edgecolors='black', label='Adrián (9991)')
-    plt.scatter(pu_2d[u_alberto, 0], pu_2d[u_alberto, 1], c='cyan', marker='*', s=250, edgecolors='black', label='Alberto (9992)')
-    
-    plt.title('Segmentación de usuarios en el espacio latente (PCA 2D)')
-    plt.xlabel('Componente principal 1')
-    plt.ylabel('Componente principal 2')
-    plt.legend(loc='best')
-    plt.grid(True, linestyle='--', alpha=0.5)
-    plt.tight_layout()
-    plt.savefig('clusters_usuarios.png', dpi=300)
-    plt.close()
-    print("    - Gráfico guardado en 'clusters_usuarios.png'.")
-
-
-# ==============================================================================
-# FUNCIÓN PRINCIPAL
-# ==============================================================================
 def main():
     ratings, movies = cargar_datos()
     df_adrian, df_alberto = crear_usuarios_equipo()
     
-    # Ampliar dataset con el equipo
     ratings_ampliado = pd.concat([ratings[['userId', 'movieId', 'rating']], df_adrian, df_alberto], ignore_index=True)
-    
-    # Entrenar modelo
     modelo, trainset = entrenar_evaluar_svd(ratings_ampliado)
     
-    # Recomendaciones para Adrián y Alberto
     print("\n" + "="*80)
     print("TOP 10 RECOMENDACIONES PARA ADRIÁN (userId: 9991)")
     print("="*80)
@@ -392,16 +253,8 @@ def main():
     top_alberto = generar_top_10(modelo, 9992, ratings_ampliado, movies)
     print(top_alberto.to_string(index=False))
     
-    # Análisis de sesgos
     analizar_sesgos(modelo, trainset, ratings_ampliado, movies)
-    
-    # Espacio latente
     analizar_espacio_latente(modelo, trainset, movies, ratings_ampliado, titulo="Toy Story", top_k=10)
-    
-    # Clustering
-    segmentar_usuarios(modelo, trainset, ratings_ampliado, movies, k=4)
-    
-
 
 
 if __name__ == '__main__':
