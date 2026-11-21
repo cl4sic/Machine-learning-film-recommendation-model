@@ -8,7 +8,7 @@ Universidad de Burgos (UBU) - Grado en Ingeniería Informática
 Grupo de prácticas: Grupo 12 (Adrián Bello Sánchez y Alberto Cuervo Prieto)
 Dataset: MovieLens 100k (ml-latest-small)
 
-Módulo 4: Análisis de sesgos estimados (bu y bi) y generación gráfica.
+Módulo 5: Análisis en el espacio latente y cálculo de similitud coseno.
 ================================================================================
 """
 
@@ -19,6 +19,8 @@ import seaborn as sns
 
 from surprise import Reader, Dataset, SVD
 from surprise.model_selection import GridSearchCV
+
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Configuración visual
 sns.set_theme(style="whitegrid", palette="muted")
@@ -198,6 +200,40 @@ def analizar_sesgos(modelo, trainset, ratings_df, movies_df):
     print("    - Gráfico guardado en 'sesgos_distribucion.png'.")
 
 
+def analizar_espacio_latente(modelo, trainset, movies_df, ratings_df, titulo="Toy Story", top_k=10, min_ratings=20):
+    """Encuentra las películas más próximas a una dada en el espacio latente usando similitud coseno."""
+    print(f"\n>>> 5. Análisis en el espacio latente: Películas más próximas a '{titulo}'...")
+    coincidencias = movies_df[movies_df['title'].str.contains(titulo, case=False, regex=False, na=False)]
+    pelicula_ref = coincidencias.iloc[0]
+    raw_id_ref = pelicula_ref['movieId']
+    inner_id_ref = trainset.to_inner_iid(raw_id_ref)
+    
+    vec_ref = modelo.qi[inner_id_ref].reshape(1, -1)
+    sims = cosine_similarity(vec_ref, modelo.qi)[0]
+    indices_ordenados = np.argsort(sims)[::-1]
+    
+    conteos = ratings_df['movieId'].value_counts().to_dict()
+    filas = []
+    for idx in indices_ordenados:
+        raw_id = trainset.to_raw_iid(idx)
+        if raw_id == raw_id_ref:
+            continue
+        votos = conteos.get(raw_id, 0)
+        if votos >= min_ratings:
+            info = movies_df[movies_df['movieId'] == raw_id].iloc[0]
+            filas.append({
+                'Título': info['title'],
+                'Géneros': info['genres'],
+                'Similitud Coseno': round(sims[idx], 3),
+                'Nº Ratings': votos
+            })
+            if len(filas) == top_k:
+                break
+    df_sim = pd.DataFrame(filas)
+    print(df_sim.to_string(index=False))
+    return df_sim
+
+
 def main():
     ratings, movies = cargar_datos()
     df_adrian, df_alberto = crear_usuarios_equipo()
@@ -218,6 +254,7 @@ def main():
     print(top_alberto.to_string(index=False))
     
     analizar_sesgos(modelo, trainset, ratings_ampliado, movies)
+    analizar_espacio_latente(modelo, trainset, movies, ratings_ampliado, titulo="Toy Story", top_k=10)
 
 
 if __name__ == '__main__':
