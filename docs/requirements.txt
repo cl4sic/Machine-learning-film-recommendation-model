@@ -1,0 +1,24 @@
+# ==============================================================================
+# Dependencias del proyecto: Filtro Colaborativo SVD (MovieLens 100k)
+# Asignatura: Gestión de la Información - Grado en Ingeniería Informática (UBU)
+# Grupo 12: Adrián Bello Sánchez y Alberto Cuervo Prieto
+# ==============================================================================
+
+# Manipulación de datos y cálculo numérico
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Librería de sistemas de recomendación (algoritmo SVD)
+scikit-surprise>=1.1.3
+
+# Machine Learning: Clustering K-Means, métricas y PCA
+scikit-learn>=1.3.0
+
+# Visualización y generación de gráficas
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Entorno de ejecución interactivo para Jupyter Notebook
+jupyter>=1.0.0
+notebook>=7.0.0
+ipykernel>=6.25.0
