@@ -8,7 +8,7 @@ Universidad de Burgos (UBU) - Grado en Ingeniería Informática
 Grupo de prácticas: Grupo 12 (Adrián Bello Sánchez y Alberto Cuervo Prieto)
 Dataset: MovieLens 100k (ml-latest-small)
 
-Módulo 2: Optimización de hiperparámetros con GridSearchCV y ajuste de SVD.
+Módulo 3: Inclusión de perfiles de usuario y generación de recomendaciones Top-10.
 ================================================================================
 """
 
@@ -37,9 +37,45 @@ def cargar_datos():
     return ratings, movies
 
 
+def crear_usuarios_equipo():
+    """
+    Crea dos usuarios representativos del equipo de prácticas (Grupo 12):
+    - Adrián (userId 9991): Aficionado a Ciencia Ficción, Acción y Thriller.
+    - Alberto (userId 9992): Aficionado a Animación, Familiar, Fantasía y Aventura.
+    """
+    print("\n>>> 2. Definiendo usuarios del equipo de prácticas...")
+    adrian_ratings = [
+        {'userId': 9991, 'movieId': 2571, 'rating': 5.0},   # Matrix
+        {'userId': 9991, 'movieId': 79132, 'rating': 5.0},  # Inception
+        {'userId': 9991, 'movieId': 109487, 'rating': 5.0}, # Interstellar
+        {'userId': 9991, 'movieId': 296, 'rating': 4.5},    # Pulp Fiction
+        {'userId': 9991, 'movieId': 589, 'rating': 4.5},    # Terminator 2
+        {'userId': 9991, 'movieId': 260, 'rating': 5.0},    # Star Wars IV
+        {'userId': 9991, 'movieId': 1196, 'rating': 5.0},   # Star Wars V
+        {'userId': 9991, 'movieId': 367, 'rating': 1.5},    # The Mask
+        {'userId': 9991, 'movieId': 357, 'rating': 1.5},    # Four Weddings
+        {'userId': 9991, 'movieId': 597, 'rating': 1.0},    # Pretty Woman
+    ]
+    
+    alberto_ratings = [
+        {'userId': 9992, 'movieId': 1, 'rating': 5.0},      # Toy Story
+        {'userId': 9992, 'movieId': 3114, 'rating': 5.0},   # Toy Story 2
+        {'userId': 9992, 'movieId': 78499, 'rating': 5.0},  # Toy Story 3
+        {'userId': 9992, 'movieId': 364, 'rating': 5.0},    # The Lion King
+        {'userId': 9992, 'movieId': 595, 'rating': 4.5},    # Beauty and the Beast
+        {'userId': 9992, 'movieId': 588, 'rating': 4.5},    # Aladdin
+        {'userId': 9992, 'movieId': 6377, 'rating': 5.0},   # Finding Nemo
+        {'userId': 9992, 'movieId': 589, 'rating': 1.0},    # Terminator 2
+        {'userId': 9992, 'movieId': 1258, 'rating': 1.5},   # The Shining
+        {'userId': 9992, 'movieId': 2571, 'rating': 1.5},   # Matrix
+    ]
+    
+    return pd.DataFrame(adrian_ratings), pd.DataFrame(alberto_ratings)
+
+
 def entrenar_evaluar_svd(ratings_df):
     """Optimiza los hiperparámetros de SVD con Grid Search CV y ajusta el mejor modelo."""
-    print("\n>>> 2. Optimización de hiperparámetros con Grid Search CV...")
+    print("\n>>> 3. Optimización de hiperparámetros con Grid Search CV...")
     reader = Reader(rating_scale=(0.5, 5.0))
     data = Dataset.load_from_df(ratings_df[['userId', 'movieId', 'rating']], reader)
     
@@ -68,10 +104,54 @@ def entrenar_evaluar_svd(ratings_df):
     return modelo, trainset
 
 
+def generar_top_10(modelo, user_id, ratings_df, movies_df, min_ratings=20):
+    """Obtiene las 10 mejores recomendaciones para un usuario no vistas previamente."""
+    vistas = set(ratings_df[ratings_df['userId'] == user_id]['movieId'])
+    conteos = ratings_df['movieId'].value_counts().to_dict()
+    
+    candidatas = [m for m in movies_df['movieId'].unique() if m not in vistas]
+    
+    preds = []
+    for mid in candidatas:
+        votos = conteos.get(mid, 0)
+        if votos >= min_ratings:
+            pred = modelo.predict(uid=user_id, iid=mid)
+            preds.append((mid, pred.est, votos))
+            
+    preds.sort(key=lambda x: x[1], reverse=True)
+    top10 = preds[:10]
+    
+    filas = []
+    for rank, (mid, est, votos) in enumerate(top10, 1):
+        info = movies_df[movies_df['movieId'] == mid].iloc[0]
+        filas.append({
+            'Ranking': f"#{rank}",
+            'Título': info['title'],
+            'Géneros': info['genres'],
+            'Nota Predicha': round(est, 2),
+            'Votos': votos
+        })
+    return pd.DataFrame(filas)
+
+
 def main():
     ratings, movies = cargar_datos()
-    modelo, trainset = entrenar_evaluar_svd(ratings)
-    print("\nFiltro SVD optimizado y entrenado correctamente.")
+    df_adrian, df_alberto = crear_usuarios_equipo()
+    
+    ratings_ampliado = pd.concat([ratings[['userId', 'movieId', 'rating']], df_adrian, df_alberto], ignore_index=True)
+    modelo, trainset = entrenar_evaluar_svd(ratings_ampliado)
+    
+    print("\n" + "="*80)
+    print("TOP 10 RECOMENDACIONES PARA ADRIÁN (userId: 9991)")
+    print("="*80)
+    top_adrian = generar_top_10(modelo, 9991, ratings_ampliado, movies)
+    print(top_adrian.to_string(index=False))
+    
+    print("\n" + "="*80)
+    print("TOP 10 RECOMENDACIONES PARA ALBERTO (userId: 9992)")
+    print("="*80)
+    top_alberto = generar_top_10(modelo, 9992, ratings_ampliado, movies)
+    print(top_alberto.to_string(index=False))
 
 
 if __name__ == '__main__':
