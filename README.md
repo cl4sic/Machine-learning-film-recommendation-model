@@ -1,10 +1,5 @@
 # 🎬 Sistema de Recomendación de Películas con Filtrado Colaborativo (SVD & Clustering)
 
-> **Asignatura:** Gestión de la Información  
-> **Titulación:** Grado en Ingeniería Informática — [Universidad de Burgos (UBU)](https://www.ubu.es/)  
-> **Grupo de prácticas:** Grupo 12  
-> **Autores:** Adrián Bello Sánchez y Alberto Cuervo Prieto  
-> **Dataset:** [MovieLens 100k (`ml-latest-small`)](https://grouplens.org/datasets/movielens/)  
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)
 ![Scikit-Surprise](https://img.shields.io/badge/Surprise-SVD%20Recommender-orange)
