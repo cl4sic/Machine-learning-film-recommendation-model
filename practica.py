@@ -8,7 +8,7 @@ Universidad de Burgos (UBU) - Grado en Ingeniería Informática
 Grupo de prácticas: Grupo 12 (Adrián Bello Sánchez y Alberto Cuervo Prieto)
 Dataset: MovieLens 100k (ml-latest-small)
 
-Módulo 3: Inclusión de perfiles de usuario y generación de recomendaciones Top-10.
+Módulo 4: Análisis de sesgos estimados (bu y bi) y generación gráfica.
 ================================================================================
 """
 
@@ -134,6 +134,70 @@ def generar_top_10(modelo, user_id, ratings_df, movies_df, min_ratings=20):
     return pd.DataFrame(filas)
 
 
+def analizar_sesgos(modelo, trainset, ratings_df, movies_df):
+    """Analiza sesgos de usuarios (bu) y de películas (bi), respondiendo al guion."""
+    print("\n>>> 4. Análisis de Sesgos Estimados (bu y bi)...")
+    mu = trainset.global_mean
+    bu = modelo.bu
+    bi = modelo.bi
+    print(f"    - Media global del modelo (μ): {mu:.4f}")
+    
+    # Sesgos de usuarios
+    usuarios_sesgos = []
+    for inner_u, bias in enumerate(bu):
+        raw_u = trainset.to_raw_uid(inner_u)
+        user_data = ratings_df[ratings_df['userId'] == raw_u]
+        nota_media = user_data['rating'].mean()
+        usuarios_sesgos.append({
+            'userId': raw_u,
+            'sesgo_bu': bias,
+            'nota_media_real': nota_media,
+            'votos': len(user_data)
+        })
+    df_u = pd.DataFrame(usuarios_sesgos)
+    
+    print("\n    [¿Qué usuarios tienden a puntuar más alto? - Top 3 Generosos]")
+    print(df_u.sort_values(by='sesgo_bu', ascending=False).head(3).to_string(index=False))
+    
+    print("\n    [¿Qué usuarios tienden a puntuar más bajo? - Top 3 Críticos]")
+    print(df_u.sort_values(by='sesgo_bu', ascending=True).head(3).to_string(index=False))
+    
+    # Películas más valoradas
+    conteos = ratings_df['movieId'].value_counts()
+    top_mas_votadas_ids = conteos.head(5).index
+    print("\n    [¿Qué películas tienden a tener más ratings? - Top 5 Más Votadas]")
+    for mid in top_mas_votadas_ids:
+        title = movies_df[movies_df['movieId'] == mid]['title'].values[0]
+        votos = conteos[mid]
+        inner_i = trainset.to_inner_iid(mid)
+        bias_i = bi[inner_i]
+        print(f"      * {title}: {votos} valoraciones (Sesgo bi: {bias_i:+.2f})")
+
+    # Histograma de sesgos
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
+
+    axes[0].hist(bu, bins=30, color='#1f77b4', edgecolor='black', alpha=0.7)
+    axes[0].axvline(0, color='red', linestyle='--', linewidth=1.5, label='Sesgo neutro (0)')
+    axes[0].set_title('Distribución de sesgos de usuarios ($b_u$)')
+    axes[0].set_xlabel('Valor del sesgo ($b_u$)')
+    axes[0].set_ylabel('Frecuencia')
+    axes[0].legend()
+    axes[0].grid(True, linestyle='--', alpha=0.5)
+
+    axes[1].hist(bi, bins=30, color='#2ca02c', edgecolor='black', alpha=0.7)
+    axes[1].axvline(0, color='red', linestyle='--', linewidth=1.5, label='Sesgo neutro (0)')
+    axes[1].set_title('Distribución de sesgos de películas ($b_i$)')
+    axes[1].set_xlabel('Valor del sesgo ($b_i$)')
+    axes[1].set_ylabel('Frecuencia')
+    axes[1].legend()
+    axes[1].grid(True, linestyle='--', alpha=0.5)
+
+    plt.tight_layout()
+    plt.savefig('sesgos_distribucion.png', dpi=300)
+    plt.close()
+    print("    - Gráfico guardado en 'sesgos_distribucion.png'.")
+
+
 def main():
     ratings, movies = cargar_datos()
     df_adrian, df_alberto = crear_usuarios_equipo()
@@ -152,6 +216,8 @@ def main():
     print("="*80)
     top_alberto = generar_top_10(modelo, 9992, ratings_ampliado, movies)
     print(top_alberto.to_string(index=False))
+    
+    analizar_sesgos(modelo, trainset, ratings_ampliado, movies)
 
 
 if __name__ == '__main__':
