@@ -1,4 +1,4 @@
-# 🎬 Sistema de Recomendación de Películas con Filtrado Colaborativo (SVD & Clustering)
+# Sistema de Recomendación de Películas con Filtrado Colaborativo (SVD & Clustering)
 
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)
@@ -11,7 +11,7 @@
 
 ---
 
-## 💻 Lenguajes y Librerías Utilizados
+## Lenguajes y Librerías Utilizados
 
 El desarrollo y experimentación del sistema se ha llevado a cabo íntegramente en **Python**, estructurado en un notebook interactivo (`practica_filtro_colaborativo.ipynb`) y un script ejecutable en terminal (`practica.py`), apoyándose en las siguientes librerías especializadas:
 
@@ -28,7 +28,7 @@ El desarrollo y experimentación del sistema se ha llevado a cabo íntegramente 
 
 ---
 
-## 🎯 Objetivo del Proyecto
+## Objetivo del Proyecto
 
 El objetivo principal es diseñar, entrenar y evaluar un **sistema de recomendación mediante filtrado colaborativo basado en modelos**, utilizando factorización matricial de bajo rango (**SVD**). Adicionalmente, se exploran actividades avanzadas de analítica de datos e interpretación de Machine Learning:
 
@@ -40,7 +40,7 @@ El objetivo principal es diseñar, entrenar y evaluar un **sistema de recomendac
 
 ---
 
-## 🔍 Resolución Procedural Paso a Paso
+## Resolución Procedural Paso a Paso
 
 ### 1. Ingesta, Exploración de Datos y Configuración de Surprise
 
@@ -191,7 +191,7 @@ $$\text{Lift}(g, c) = \frac{P(g \mid \text{Cluster } c, r \ge 4.0)}{P(g \mid \te
 * **Segmento 3 (325 usuarios, 53.1%) — *Suspense Psicológico, Terror y Cine Alternativo*:**
   * **Géneros clave:** *Documentary, IMAX, Horror, Mystery*.
   * **Películas insignia:** *The Blair Witch Project*, *Brazil*, *Night of the Living Dead*.
-  * 👉 **Adrián (`userId 9991`)** queda clasificado en este segmento, reflejando su perfil de ciencia ficción oscura y thrillers.
+  * **Adrián (`userId 9991`)** queda clasificado en este segmento, reflejando su perfil de ciencia ficción oscura y thrillers.
 
 #### Explicación Visual del Clustering en el Espacio Latente (PCA 2D)
 
@@ -209,7 +209,7 @@ $$\text{Lift}(g, c) = \frac{P(g \mid \text{Cluster } c, r \ge 4.0)}{P(g \mid \te
 
 ---
 
-## 📂 Estructura del Repositorio
+## Estructura del Repositorio
 
 ```text
 Machine-learning-film-recommendation-model/
@@ -236,7 +236,7 @@ Machine-learning-film-recommendation-model/
 
 ---
 
-## ⚙️ Instalación y Guía de Uso
+## Instalación y Guía de Uso
 
 ### 1. Clonar el repositorio y preparar el entorno
 
@@ -275,7 +275,7 @@ jupyter notebook practica_filtro_colaborativo.ipynb
 
 ---
 
-## 📊 Resumen de Resultados Clave
+## Resumen de Resultados Clave
 
 | Métrica / Parámetro | Valor Obtenido | Significado Práctico |
 | :--- | :---: | :--- |
@@ -288,7 +288,7 @@ jupyter notebook practica_filtro_colaborativo.ipynb
 
 ---
 
-## 📜 Licencia y Referencias
+## Licencia y Referencias
 
 * **Dataset:** F. Maxwell Harper and Joseph A. Konstan. 2015. *The MovieLens Datasets: History and Context*. ACM Transactions on Interactive Intelligent Systems (TiiS) 5, 4: 19:1–19:19. https://doi.org/10.1145/2827872
 * **Biblioteca Surprise:** Nicolas Hug. 2020. *Surprise: A Python library for recommender systems*. Journal of Open Source Software, 5(52), 2174. https://surprise.readthedocs.io/
